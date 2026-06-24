@@ -3,7 +3,7 @@
 FROM rockylinux:9.1 AS base
 ENV TROUTE_REPO=CIROH-UA/t-route
 ENV TROUTE_BRANCH=ngiab
-ENV NGEN_REPO=sakoriche/ngen
+ENV NGEN_REPO=skoriche/ngen
 ENV NGEN_BRANCH=update_models
 
 # Install final dependencies to make sure ngen is build and deployed with matching versions
@@ -90,7 +90,7 @@ RUN mkdir /wheels && cp /ngen/t-route/src/troute-*/dist/*.whl /wheels/
 FROM troute_prebuild AS ngen_clone
 WORKDIR /ngen
 ## make sure clone isn't cached if repo is updated
-ADD https://api.github.com/repos/${NGEN_REPO}/git/refs/heads/${NGEN_BRANCH} /tmp/version.json
+#ADD https://api.github.com/repos/${NGEN_REPO}/git/refs/heads/${NGEN_BRANCH} /tmp/version.json
 RUN git clone --single-branch --branch $NGEN_BRANCH https://github.com/$NGEN_REPO.git && \
     cd ngen && \
     git submodule update --init --recursive --depth 1
