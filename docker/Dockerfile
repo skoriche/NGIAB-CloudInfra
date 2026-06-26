@@ -15,7 +15,7 @@ RUN dnf update -y && \
     dnf install -y \
     vim libgfortran sqlite \
     bzip2 expat udunits2 zlib \
-    mpich hdf5 netcdf netcdf-fortran netcdf-cxx netcdf-cxx4-mpich \
+    openmpi hdf5 netcdf netcdf-fortran netcdf-cxx netcdf-cxx4-openmpi \
     openblas-serial python3.11
 
 # Install UV and setup cargo bin for rust tools (uv and cargo)
@@ -34,7 +34,7 @@ RUN dnf install -y epel-release && \
     sudo gcc gcc-c++ make cmake ninja-build tar git gcc-gfortran libgfortran sqlite sqlite-devel \
     python3.11-devel python3.11-pip \
     expat-devel flex bison udunits2-devel zlib-devel \
-    wget mpich-devel hdf5-devel netcdf-devel \
+    wget openmpi-devel hdf5-devel netcdf-devel \
     netcdf-fortran-devel netcdf-cxx-devel lld clang \
     openblas-devel
 
@@ -96,7 +96,7 @@ RUN git clone --single-branch --branch $NGEN_BRANCH https://github.com/$NGEN_REP
     git submodule update --init --recursive --depth 1
 
 FROM ngen_clone AS ngen_build
-ENV PATH=${PATH}:/usr/lib64/mpich/bin
+ENV PATH=${PATH}:/usr/lib64/openmpi/bin
 
 WORKDIR /ngen/ngen
 RUN echo $(git remote get-url origin | sed 's/\.git$//' | awk '{print $0 "/tree/" }' | tr -d '\n' && git rev-parse HEAD) >> /tmp/ngen_url
@@ -123,17 +123,17 @@ RUN cmake -G Ninja -B cmake_build_serial -S . ${COMMON_BUILD_ARGS} -DNGEN_WITH_M
     cmake --build cmake_build_serial --target all -- -j $(nproc)
 
 ARG MPI_BUILD_ARGS="-DNGEN_WITH_MPI:BOOL=ON \
-    -DNetCDF_ROOT=/usr/lib64/mpich \
-    -DCMAKE_PREFIX_PATH=/usr/lib64/mpich \
-    -DCMAKE_LIBRARY_PATH=/usr/lib64/mpich/lib"
+    -DNetCDF_ROOT=/usr/lib64/openmpi \
+    -DCMAKE_PREFIX_PATH=/usr/lib64/openmpi \
+    -DCMAKE_LIBRARY_PATH=/usr/lib64/openmpi/lib"
 # the two in the command below can't be here because the $() isn't evaulated properly
 
 
 # Install the mpi enabled netcdf library and build Ngen parallel with it
-RUN dnf install -y netcdf-cxx4-mpich-devel
+RUN dnf install -y netcdf-cxx4-openmpi-devel
 RUN cmake -G Ninja -B cmake_build_parallel -S . ${COMMON_BUILD_ARGS} ${MPI_BUILD_ARGS} \
-    -DNetCDF_CXX_INCLUDE_DIR=/usr/include/mpich-$(arch) \
-    -DNetCDF_INCLUDE_DIR=/usr/include/mpich-$(arch) && \
+    -DNetCDF_CXX_INCLUDE_DIR=/usr/include/openmpi-$(arch) \
+    -DNetCDF_INCLUDE_DIR=/usr/include/openmpi-$(arch) && \
     cmake --build cmake_build_parallel --target all -- -j $(nproc)
 
 
@@ -193,7 +193,7 @@ COPY  HelloNGEN.sh /ngen/HelloNGEN.sh
 # Set up library path
 RUN echo "/dmod/shared_libs/" >> /etc/ld.so.conf.d/ngen.conf && ldconfig -v
 # Add mpirun to path
-ENV PATH=$PATH:/usr/lib64/mpich/bin
+ENV PATH=$PATH:/usr/lib64/openmpi/bin
 # Set permissions
 RUN chmod a+x /dmod/bin/* /ngen/HelloNGEN.sh
 RUN mv /ngen/ngen /ngen/ngen_src
@@ -240,7 +240,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN echo "/dmod/shared_libs/" >> /etc/ld.so.conf.d/ngen.conf && ldconfig -v
 
 # Add mpirun to path
-ENV PATH=$PATH:/usr/lib64/mpich/bin
+ENV PATH=$PATH:/usr/lib64/openmpi/bin
 RUN chmod a+x /dmod/bin/* /ngen/HelloNGEN.sh
 
 # Only here after everything else is done will the ngen binary work and provide --info
